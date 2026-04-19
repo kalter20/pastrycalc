@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#C84B31">
+<meta name="description" content="Calculadora profesional de costos de repostería">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PastryCalc">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>PastryCalc · Repostería</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --rose:#C84B31;--roseL:#FDECEA;--roseMid:#F5A99A;
+  --dark:#1C1208;--muted:#8C7B6B;--line:rgba(28,18,8,0.1);
+  --green:#2D7A2A;--greenL:#EFF7EE;
+  --amber:#A0550A;--amberL:#FEF3E2;
+  --cream:#FBF7F2;--white:#fff;
+  --r:12px;--rsm:8px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--cream);color:var(--dark);font-size:14px}
+
+/* LAYOUT */
+.app-shell{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;background:var(--cream)}
+.topbar{background:var(--rose);padding:calc(12px + var(--safe-top)) 16px 12px;flex-shrink:0}
+.topbar-row{display:flex;align-items:center;justify-content:space-between}
+.topbar-title{color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px}
+.topbar-sub{color:rgba(255,255,255,.65);font-size:11px;margin-top:2px}
+.saved-dot{width:6px;height:6px;border-radius:50%;background:#6EE06E;display:inline-block;margin-right:4px;vertical-align:middle}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.bottomnav{background:var(--white);border-top:0.5px solid var(--line);padding:6px 0 calc(6px + var(--safe-bot));display:flex;justify-content:space-around;flex-shrink:0}
+.bnav{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:none;background:transparent;cursor:pointer;padding:5px 0;color:var(--muted);font-size:10px;font-weight:500}
+.bnav.on{color:var(--rose)}
+.bnav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* SECTIONS */
+.sec{display:none;padding:12px 14px 20px}
+.sec.on{display:block}
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sec-head h2{font-size:16px;font-weight:600}
+
+/* CARDS */
+.card{background:var(--white);border-radius:var(--r);border:0.5px solid var(--line);padding:14px;margin-bottom:10px}
+.card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat{background:var(--white);border-radius:var(--rsm);border:0.5px solid var(--line);padding:12px}
+.stat-l{font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+.stat-v{font-size:22px;font-weight:700;color:var(--dark);margin-top:3px}
+.stat-v.rose{color:var(--rose)}
+
+/* ITEMS */
+.item{background:var(--white);border-radius:var(--r);border:0.5px solid var(--line);margin-bottom:8px;overflow:hidden}
+.item-h{display:flex;align-items:center;gap:10px;padding:12px 13px;cursor:pointer;user-select:none}
+.item-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.item-n{font-size:14px;font-weight:500}
+.item-m{font-size:11px;color:var(--muted);margin-top:1px}
+.badges{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px}
+.b-rose{background:var(--roseL);color:var(--rose)}
+.b-green{background:var(--greenL);color:var(--green)}
+.b-amber{background:var(--amberL);color:var(--amber)}
+.b-gray{background:rgba(28,18,8,.07);color:var(--muted)}
+.chev{font-size:9px;color:var(--muted);transition:transform .18s;margin-left:2px}
+.item.exp .chev{transform:rotate(180deg)}
+.item-b{display:none;border-top:0.5px solid var(--line);padding:10px 13px}
+.item.exp .item-b{display:block}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{color:var(--muted);font-weight:500;text-align:left;padding:3px 0;border-bottom:0.5px solid var(--line)}
+.tbl td{padding:4px 0;border-bottom:0.5px solid rgba(28,18,8,.04)}
+.tbl td:last-child{text-align:right;font-weight:600;color:var(--rose)}
+
+/* SUM ROWS */
+.sr{display:flex;justify-content:space-between;font-size:12px;padding:4px 0}
+.sr.big{font-weight:700;font-size:13px;border-top:0.5px solid var(--line);margin-top:4px;padding-top:7px;color:var(--rose)}
+.divider{height:1px;background:var(--line);margin:8px 0}
+.action-row{display:flex;gap:6px;margin-top:10px}
+
+/* BUTTONS */
+.btn{padding:11px;border:none;border-radius:var(--rsm);font-size:13px;font-weight:600;cursor:pointer;width:100%;transition:opacity .15s}
+.btn-p{background:var(--rose);color:#fff}.btn-p:active{opacity:.83}
+.btn-g{background:transparent;border:0.5px solid var(--line);color:var(--dark)}.btn-g:active{opacity:.7}
+.btn-sm{padding:5px 11px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;border:0.5px solid var(--line);background:transparent;color:var(--muted);white-space:nowrap}
+.btn-sm:active{opacity:.7}
+.btn-sm.edit:hover{background:var(--roseL);color:var(--rose);border-color:var(--roseMid)}
+.btn-sm.del:hover{background:#FDECEA;color:#c0392b}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+.field input,.field select,.field textarea{padding:10px 12px;border:0.5px solid var(--line);border-radius:var(--rsm);font-size:14px;background:#FAFAFA;color:var(--dark);width:100%;outline:none;-webkit-appearance:none;appearance:none}
+.field input:focus,.field select:focus{border-color:var(--roseMid)}
+.field textarea{resize:none;height:52px}
+.row2{flex-direction:row;gap:8px}.row2>div{flex:1;display:flex;flex-direction:column;gap:4px}
+.row2 label{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+
+/* PICKER */
+.picker-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border:0.5px solid var(--line);border-radius:var(--rsm);background:#FAFAFA;margin-bottom:6px}
+.picker-item.sel{background:var(--roseL);border-color:var(--roseMid)}
+.pi-name{flex:1;font-size:13px;font-weight:500}
+.pi-ctrl{display:flex;align-items:center;gap:6px}
+.pi-ctrl button{width:24px;height:24px;border:0.5px solid var(--line);border-radius:50%;background:var(--white);font-size:15px;cursor:pointer;color:var(--dark);display:flex;align-items:center;justify-content:center}
+.pi-ctrl span{min-width:18px;text-align:center;font-weight:700;font-size:13px}
+
+/* SUMMARY BOX */
+.sum-box{background:var(--roseL);border:0.5px solid var(--roseMid);border-radius:var(--r);padding:12px;margin-bottom:10px}
+
+/* SEARCH */
+.search-input{width:100%;padding:10px 14px;border:0.5px solid var(--line);border-radius:var(--rsm);font-size:13px;background:var(--white);margin-bottom:10px;outline:none}
+
+/* FILTERS */
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.f-btn{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:0.5px solid var(--line);background:var(--white);color:var(--muted)}
+.f-btn.on{background:var(--dark);color:#fff;border-color:var(--dark)}
+
+/* AVATAR */
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
+
+/* URGENT */
+.urgent{background:var(--roseL);color:var(--rose);font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;margin-left:5px;vertical-align:middle}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(28,18,8,.4);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--white);border-radius:20px 20px 0 0;padding:20px 16px calc(20px + var(--safe-bot));width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal-handle{width:40px;height:4px;background:var(--line);border-radius:2px;margin:0 auto 16px}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:14px}
+.modal-btns{display:flex;gap:8px;margin-top:14px}
+.modal-btns button{flex:1;padding:11px;border-radius:var(--rsm);font-size:13px;font-weight:600;cursor:pointer}
+.m-c{background:transparent;border:0.5px solid var(--line);color:var(--muted)}
+.m-ok{background:var(--rose);border:none;color:#fff}
+.st-btn{width:100%;padding:12px;border:0.5px solid var(--line);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:7px}
+
+/* BAR */
+.bar-row{margin-bottom:9px}
+.bar-top{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.bar-track{background:rgba(28,18,8,.07);border-radius:3px;height:5px}
+.bar-fill{height:5px;border-radius:3px;background:var(--rose)}
+
+/* UPCOMING */
+.upc{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--line);font-size:12px}
+.upc:last-child{border-bottom:none}
+
+.empty{text-align:center;padding:30px 20px;color:var(--muted);font-size:13px;line-height:1.6}
+
+/* TOAST */
+#toast{position:fixed;bottom:calc(70px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(20px);background:var(--dark);color:#fff;font-size:12px;padding:9px 18px;border-radius:20px;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:200;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* INFO PREVIEW */
+.info-box{background:var(--roseL);border-radius:var(--rsm);padding:9px 11px;font-size:12px;color:var(--rose);margin-bottom:4px}
+
+/* INSTALL BANNER */
+#install-banner{background:var(--dark);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;flex-shrink:0}
+#install-banner button{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:var(--rose);color:#fff}
+#install-banner .close-x{background:transparent;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;padding:0 4px}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="topbar">
+    <div class="topbar-row">
+      <div>
+        <div class="topbar-title">✦ PastryCalc</div>
+        <div class="topbar-sub"><span class="saved-dot"></span>Datos guardados · v2.0</div>
+      </div>
+      <div style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;padding:4px 10px;border-radius:10px;font-weight:600">Eilyn</div>
+    </div>
+  </div>
+
+  <div id="install-banner" style="display:none">
+    <span>Instala PastryCalc como app en tu celular</span>
+    <button id="install-btn">Instalar</button>
+    <button class="close-x" onclick="document.getElementById('install-banner').style.display='none'">×</button>
+  </div>
+
+  <div class="content" id="content">
+    <!-- HOME -->
+    <div class="sec on" id="sec-home">
+      <div class="stats-grid" id="home-stats"></div>
+      <div class="card"><div class="card-title">Próximas entregas</div><div id="home-upc"></div></div>
+      <div class="card"><div class="card-title">Productos más vendidos</div><div id="home-top"></div></div>
+    </div>
+
+    <!-- RECETAS -->
+    <div class="sec" id="sec-recetas">
+      <div class="sec-head"><h2>Mis recetas</h2><button class="btn-sm edit" onclick="openRecipeModal(null)">+ Nueva</button></div>
+      <div id="recipe-list"></div>
+    </div>
+
+    <!-- INSUMOS -->
+    <div class="sec" id="sec-insumos">
+      <div class="sec-head"><h2>Insumos</h2><button class="btn-sm edit" onclick="openIngModal(null)">+ Agregar</button></div>
+      <input class="search-input" id="db-search" placeholder="Buscar insumo..." oninput="renderDB()">
+      <div id="db-list"></div>
+    </div>
+
+    <!-- PEDIDOS -->
+    <div class="sec" id="sec-pedidos">
+      <div class="sec-head"><h2>Pedidos</h2><button class="btn-sm edit" onclick="openOrderModal()">+ Nuevo</button></div>
+      <div class="filters" id="order-filters"></div>
+      <div id="order-list"></div>
+    </div>
+  </div>
+
+  <nav class="bottomnav">
+    <button class="bnav on" id="nav-home" onclick="showTab('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Inicio
+    </button>
+    <button class="bnav" id="nav-recetas" onclick="showTab('recetas')">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/><path d="M12 8v4l3 3"/></svg>
+      Recetas
+    </button>
+    <button class="bnav" id="nav-insumos" onclick="showTab('insumos')">
+      <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Insumos
+    </button>
+    <button class="bnav" id="nav-pedidos" onclick="showTab('pedidos')">
+      <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      Pedidos
+    </button>
+  </nav>
+</div>
+
+<div id="modal-area"></div>
+<div id="toast"></div>
+
+<script>
+const SK = 'pastrycalc_v2';
+
+const DEF_DB = [
+  {id:1,name:'Harina',qty:900,unit:'g',price:1.30,supplier:'Mercado',updated:false},
+  {id:2,name:'Azúcar',qty:1000,unit:'g',price:1.55,supplier:'Mercado',updated:false},
+  {id:3,name:'Huevos',qty:30,unit:'unidades',price:7.40,supplier:'Mercado',updated:false},
+  {id:4,name:'Mantequilla',qty:5000,unit:'g',price:24.00,supplier:'Mercado',updated:false},
+  {id:5,name:'Vainilla',qty:1000,unit:'ml',price:1.80,supplier:'Mercado',updated:false},
+  {id:6,name:'Chispas Chocolate',qty:1000,unit:'g',price:12.00,supplier:'Mayorista',updated:false},
+  {id:7,name:'Crema de Chocolate',qty:500,unit:'g',price:5.00,supplier:'Mayorista',updated:false},
+  {id:8,name:'Azúcar Morena',qty:1000,unit:'g',price:3.00,supplier:'Mercado',updated:false},
+  {id:9,name:'Maicena',qty:1000,unit:'g',price:2.00,supplier:'Mercado',updated:false},
+  {id:10,name:'Polvo de Hornear',qty:250,unit:'g',price:1.50,supplier:'Mercado',updated:false},
+  {id:11,name:'Bicarbonato',qty:180,unit:'g',price:2.00,supplier:'Mercado',updated:false},
+  {id:12,name:'Bolsas',qty:50,unit:'unidades',price:2.50,supplier:'Empaque',updated:false},
+  {id:13,name:'Galletas',qty:1,unit:'unidades',price:0,supplier:'',updated:false},
+  {id:14,name:'Cacao',qty:500,unit:'g',price:17.00,supplier:'Mayorista',updated:false},
+  {id:15,name:'Arequipe',qty:1000,unit:'g',price:8.20,supplier:'Mercado',updated:false},
+  {id:16,name:'Leche',qty:1000,unit:'ml',price:11.49,supplier:'Mercado',updated:false},
+  {id:17,name:'Azúcar Pulverizada',qty:1000,unit:'g',price:3.00,supplier:'Mercado',updated:false},
+  {id:18,name:'Chocolate Blanco',qty:1000,unit:'g',price:6.80,supplier:'Mayorista',updated:false},
+  {id:20,name:'Oreo',qty:2,unit:'unidades',price:2.30,supplier:'Supermercado',updated:false},
+  {id:21,name:'Coco Rallado',qty:100,unit:'g',price:1.50,supplier:'Mercado',updated:false},
+  {id:22,name:'Envases',qty:12,unit:'unidades',price:1.80,supplier:'Empaque',updated:false},
+];
+
+const DEF_RECIPES = [
+  {id:1,name:'Choco Brownie',units:15,margin:65,overhead:10,waste:5,laborRate:0,laborMin:0,color:'#C84B31',
+   ings:[{id:1,qty:400},{id:2,qty:100,cP:1.70},{id:3,qty:2},{id:4,qty:200},{id:8,qty:100},{id:9,qty:10},{id:10,qty:4},{id:11,qty:2},{id:12,qty:16,cP:2.50},{id:5,qty:9},{id:6,qty:250,cP:12.00},{id:7,qty:100}]},
+  {id:2,name:'Choco Chips',units:11,margin:65,overhead:10,waste:5,laborRate:0,laborMin:0,color:'#7B4A2D',
+   ings:[{id:1,qty:205,cP:1.30},{id:2,qty:150,cP:2.00},{id:3,qty:1,cP:7.00},{id:14,qty:40},{id:10,qty:4},{id:11,qty:2},{id:12,qty:11,cP:2.30},{id:5,qty:9},{id:6,qty:150,cP:14.00},{id:7,qty:50}]},
+  {id:3,name:'Alfajores',units:16,margin:65,overhead:10,waste:5,laborRate:0,laborMin:0,color:'#A0550A',
+   ings:[{id:1,qty:195,cP:1.00},{id:17,qty:65},{id:3,qty:1},{id:5,qty:7},{id:4,qty:250},{id:9,qty:180,cQ:2000},{id:10,qty:3},{id:15,qty:350,cP:8.00},{id:21,qty:30},{id:12,qty:16}]},
+  {id:4,name:'Oreo Milk',units:15,margin:65,overhead:10,waste:5,laborRate:0,laborMin:0,color:'#185FA5',
+   ings:[{id:1,qty:215,cP:1.15,cQ:1000},{id:2,qty:21,cP:1.50},{id:3,qty:2,cP:5.00},{id:4,qty:85},{id:8,qty:107},{id:10,qty:4},{id:11,qty:1},{id:12,qty:11},{id:5,qty:7},{id:18,qty:180},{id:20,qty:2}]},
+];
+
+const DEF_ORDERS = [
+  {id:1,client:'Laura Medina',phone:'+593 98 123 4567',date:'2026-04-21',time:'10:00',pay:'Transferencia',notes:'Sector Los Ceibos',status:'ready',items:[{rId:1,qty:2},{rId:3,qty:1}]},
+  {id:2,client:'Carlos Rivas',phone:'+593 99 876 5432',date:'2026-04-22',time:'15:00',pay:'Efectivo',notes:'Llamar antes',status:'pending',items:[{rId:2,qty:3},{rId:4,qty:2}]},
+  {id:3,client:'Andrea Torres',phone:'',date:'2026-04-10',time:'09:00',pay:'Efectivo',notes:'',status:'delivered',items:[{rId:1,qty:1},{rId:3,qty:1}]},
+];
+
+let S = {db:[],recipes:[],orders:[],nextId:50,orderFilter:'all'};
+
+function load(){
+  try{const r=localStorage.getItem(SK);if(r){S={...S,...JSON.parse(r)};return;}}catch(e){}
+  S.db=JSON.parse(JSON.stringify(DEF_DB));
+  S.recipes=JSON.parse(JSON.stringify(DEF_RECIPES));
+  S.orders=JSON.parse(JSON.stringify(DEF_ORDERS));
+  save();
+}
+function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+const gi = id => S.db.find(x=>x.id===id);
+const gr = id => S.recipes.find(x=>x.id===id);
+function uc(d,ri={}){const p=ri.cP??d.price??0,q=ri.cQ??d.qty??0;return q?p/q:0;}
+function iCost(ri){const d=gi(ri.id)||{};return uc(d,ri)*ri.qty;}
+function rInv(r){return r.ings.reduce((s,ri)=>s+iCost(ri),0);}
+function rCU(r){const inv=rInv(r),w=inv*(1+(r.waste||0)/100),o=w*((r.overhead||0)/100),l=(r.laborRate||0)*((r.laborMin||0)/60);return r.units>0?(w+o+l)/r.units:0;}
+function rPU(r){return rCU(r)*(1+(r.margin||65)/100);}
+function oTotal(o){return o.items.reduce((s,it)=>{const r=gr(it.rId);return s+(r?rPU(r)*r.units*it.qty:0);},0);}
+function initials(n){return n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();}
+function avBg(n){const c=['#FDECEA','#EFF7EE','#E6F1FB','#FEF3E2','#EEEDFE'];let h=0;for(let ch of n)h=(h*31+ch.charCodeAt(0))%c.length;return c[h];}
+function avFg(n){const c=['#C84B31','#2D7A2A','#185FA5','#A0550A','#534AB7'];let h=0;for(let ch of n)h=(h*31+ch.charCodeAt(0))%c.length;return c[h];}
+function dUntil(ds){const d=new Date(ds+'T00:00'),n=new Date();n.setHours(0,0,0,0);return Math.round((d-n)/864e5);}
+function fDate(ds){return new Date(ds+'T00:00').toLocaleDateString('es-EC',{day:'numeric',month:'short'});}
+function todayStr(){return new Date().toISOString().split('T')[0];}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+function closeModal(){document.getElementById('modal-area').innerHTML='';}
+function toggleItem(id){document.getElementById(id)?.classList.toggle('exp');}
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+const TABS=['home','recetas','insumos','pedidos'];
+function showTab(t){
+  TABS.forEach(s=>{
+    document.getElementById('sec-'+s)?.classList.toggle('on',s===t);
+    document.getElementById('nav-'+s)?.classList.toggle('on',s===t);
+  });
+  document.getElementById('content').scrollTop=0;
+  if(t==='home')renderHome();
+  if(t==='recetas')renderRecipes();
+  if(t==='insumos')renderDB();
+  if(t==='pedidos')renderOrders();
+}
+
+// handle ?tab= param
+const urlTab=new URLSearchParams(location.search).get('tab');
+if(urlTab&&TABS.includes(urlTab))showTab(urlTab);
+
+// ── HOME ──────────────────────────────────────────────────────────────────
+function renderHome(){
+  const active=S.orders.filter(o=>o.status!=='delivered');
+  const rev=S.orders.reduce((s,o)=>s+oTotal(o),0);
+  document.getElementById('home-stats').innerHTML=`
+    <div class="stat"><div class="stat-l">Activos</div><div class="stat-v">${active.length}</div></div>
+    <div class="stat"><div class="stat-l">Total</div><div class="stat-v rose">$${rev.toFixed(2)}</div></div>
+    <div class="stat"><div class="stat-l">Pendientes</div><div class="stat-v">${S.orders.filter(o=>o.status==='pending').length}</div></div>
+    <div class="stat"><div class="stat-l">Recetas</div><div class="stat-v">${S.recipes.length}</div></div>`;
+
+  const upc=[...active].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,4);
+  document.getElementById('home-upc').innerHTML=upc.length?upc.map(o=>{
+    const d=dUntil(o.date),lbl=d===0?'Hoy':d===1?'Mañana':d<0?'Vencido':`${d} días`;
+    const col=d<=0?'var(--rose)':d===1?'var(--amber)':'var(--green)';
+    return `<div class="upc"><div><span style="font-weight:500">${o.client}</span><span style="color:var(--muted);font-size:11px"> · $${oTotal(o).toFixed(2)}</span></div><span style="color:${col};font-weight:600;font-size:11px">${lbl}</span></div>`;
+  }).join(''):'<div class="empty">Sin entregas próximas</div>';
+
+  const sales={};
+  S.orders.forEach(o=>o.items.forEach(it=>{const r=gr(it.rId);if(!r)return;sales[r.name]=(sales[r.name]||0)+it.qty*(r.units||1);}));
+  const sorted=Object.entries(sales).sort((a,b)=>b[1]-a[1]);
+  const max=sorted[0]?.[1]||1;
+  document.getElementById('home-top').innerHTML=sorted.length?sorted.slice(0,5).map(([n,q])=>`
+    <div class="bar-row"><div class="bar-top"><span style="font-weight:500">${n}</span><span style="color:var(--muted)">${q} uds</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${(q/max*100).toFixed(0)}%"></div></div></div>`).join(''):'<div class="empty">Sin ventas aún</div>';
+}
+
+// ── RECIPES ───────────────────────────────────────────────────────────────
+function renderRecipes(){
+  const el=document.getElementById('recipe-list');
+  if(!S.recipes.length){el.innerHTML='<div class="empty">No tienes recetas.<br>Toca "+ Nueva" para comenzar.</div>';return;}
+  el.innerHTML=S.recipes.map(r=>{
+    const inv=rInv(r),pu=rPU(r);
+    const rows=r.ings.map(ri=>{const d=gi(ri.id)||{};const c=iCost(ri);if(!c)return '';return `<tr><td>${d.name||'?'}</td><td>${ri.qty} ${d.unit||''}</td><td>$${c.toFixed(2)}</td></tr>`;}).join('');
+    const w=inv*(1+(r.waste||0)/100),o=w*((r.overhead||0)/100),l=(r.laborRate||0)*((r.laborMin||0)/60);
+    return `<div class="item" id="rc-${r.id}">
+      <div class="item-h" onclick="toggleItem('rc-${r.id}')">
+        <div class="item-dot" style="background:${r.color}"></div>
+        <div style="flex:1"><div class="item-n">${r.name}</div><div class="item-m">${r.units} uds · ${r.ings.length} ingredientes</div></div>
+        <div class="badges"><span class="badge b-rose">$${inv.toFixed(2)}</span><span class="badge b-green">→$${pu.toFixed(2)}</span><span class="chev">▼</span></div>
+      </div>
+      <div class="item-b">
+        <table class="tbl"><thead><tr><th>Ingrediente</th><th>Cant.</th><th>Costo</th></tr></thead><tbody>${rows}</tbody></table>
+        <div class="divider"></div>
+        <div class="sr"><span>Inversión</span><span>$${inv.toFixed(2)}</span></div>
+        <div class="sr"><span>+ Desperdicio (${r.waste}%)</span><span>$${(w-inv).toFixed(2)}</span></div>
+        <div class="sr"><span>+ Operativos (${r.overhead}%)</span><span>$${o.toFixed(2)}</span></div>
+        ${l>0?`<div class="sr"><span>+ Mano de obra</span><span>$${l.toFixed(2)}</span></div>`:''}
+        <div class="sr big"><span>Precio sugerido/ud</span><span>$${pu.toFixed(2)}</span></div>
+        <div class="action-row">
+          <button class="btn-sm edit" onclick="openRecipeModal(${r.id})">Editar</button>
+          <button class="btn-sm del" onclick="delRecipe(${r.id})">Eliminar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function delRecipe(id){if(!confirm('¿Eliminar esta receta?'))return;S.recipes=S.recipes.filter(r=>r.id!==id);save();renderRecipes();toast('Receta eliminada');}
+
+function openRecipeModal(id){
+  const r=id?gr(id):{id:null,name:'',units:12,margin:65,overhead:10,waste:5,laborRate:0,laborMin:0,color:'#C84B31',ings:[]};
+  window._mIngs=[...r.ings];
+  const opts=S.db.map(d=>`<option value="${d.id}">${d.name} (${d.unit})</option>`).join('');
+  document.getElementById('modal-area').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <div class="modal-handle"></div>
+    <h3>${id?'Editar receta':'Nueva receta'}</h3>
+    <div class="field"><label>Nombre</label><input id="m-name" value="${r.name}" placeholder="Ej: Choco Brownie"></div>
+    <div class="field row2"><div><label>Unidades</label><input type="number" id="m-units" value="${r.units}" min="1"></div><div><label>% Margen</label><input type="number" id="m-margin" value="${r.margin}"></div></div>
+    <div class="field row2"><div><label>% Overhead</label><input type="number" id="m-ovh" value="${r.overhead}"></div><div><label>% Desperdicio</label><input type="number" id="m-waste" value="${r.waste}"></div></div>
+    <div class="field row2"><div><label>$/hr mano obra</label><input type="number" id="m-lr" value="${r.laborRate}" step="0.5"></div><div><label>Minutos</label><input type="number" id="m-lm" value="${r.laborMin}"></div></div>
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:10px 0 7px">Ingredientes</div>
+    <div id="m-ings"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <select id="m-isel" style="flex:2;padding:9px 10px;border:0.5px solid var(--line);border-radius:var(--rsm);font-size:12px;background:#FAFAFA">${opts}</select>
+      <input type="number" id="m-iqty" placeholder="Cant." style="flex:1;padding:9px 10px;border:0.5px solid var(--line);border-radius:var(--rsm);font-size:12px;background:#FAFAFA">
+      <button class="btn-sm edit" onclick="mAddIng()">+</button>
+    </div>
+    <div class="modal-btns"><button class="m-c" onclick="closeModal()">Cancelar</button><button class="m-ok" onclick="saveRecipe(${id||'null'})">Guardar</button></div>
+  </div></div>`;
+  renderMIngs();
+}
+function renderMIngs(){
+  const el=document.getElementById('m-ings');if(!el)return;
+  el.innerHTML=window._mIngs.length?window._mIngs.map((ri,i)=>{const d=gi(ri.id)||{};return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:0.5px solid var(--line);font-size:12px"><span style="flex:1;font-weight:500">${d.name||'?'}</span><span style="color:var(--muted)">${ri.qty} ${d.unit||''}</span><span style="color:var(--rose);font-weight:600">$${iCost(ri).toFixed(2)}</span><button class="btn-sm del" style="padding:2px 7px" onclick="mDelIng(${i})">✕</button></div>`;}).join(''):'<div style="color:var(--muted);font-size:12px;padding:4px 0 8px">Sin ingredientes aún</div>';
+}
+function mAddIng(){const id=parseInt(document.getElementById('m-isel').value),qty=parseFloat(document.getElementById('m-iqty').value);if(!id||!qty)return;window._mIngs.push({id,qty});document.getElementById('m-iqty').value='';renderMIngs();}
+function mDelIng(i){window._mIngs.splice(i,1);renderMIngs();}
+function saveRecipe(eid){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){toast('⚠ Ingresa un nombre');return;}
+  const rec={id:eid||S.nextId++,name,units:+document.getElementById('m-units').value||12,margin:+document.getElementById('m-margin').value||65,overhead:+document.getElementById('m-ovh').value||10,waste:+document.getElementById('m-waste').value||5,laborRate:+document.getElementById('m-lr').value||0,laborMin:+document.getElementById('m-lm').value||0,color:'#C84B31',ings:[...window._mIngs]};
+  if(eid)S.recipes=S.recipes.map(r=>r.id===eid?rec:r);else S.recipes.push(rec);
+  save();closeModal();renderRecipes();toast(eid?'Receta actualizada ✓':'Receta guardada ✓');
+}
+
+// ── DB ────────────────────────────────────────────────────────────────────
+function renderDB(){
+  const q=(document.getElementById('db-search')?.value||'').toLowerCase();
+  document.getElementById('db-list').innerHTML=S.db.filter(d=>d.name.toLowerCase().includes(q)).map(d=>`
+    <div class="item"><div class="item-h" style="cursor:default">
+      <div style="flex:1"><div class="item-n">${d.name}${d.updated?'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--rose);margin-left:6px;vertical-align:middle"></span>':''}</div>
+      <div class="item-m">${d.qty} ${d.unit}${d.supplier?' · '+d.supplier:''}</div></div>
+      <div class="badges"><span class="badge b-gray">$${d.price.toFixed(2)}</span><span class="badge b-rose">$${d.qty?(d.price/d.qty).toFixed(4):'-'}/${d.unit}</span>
+      <button class="btn-sm edit" onclick="openIngModal(${d.id})">Editar</button></div>
+    </div></div>`).join('');
+}
+function openIngModal(id){
+  const d=id?S.db.find(x=>x.id===id):{id:null,name:'',price:0,qty:0,unit:'g',supplier:''};
+  document.getElementById('modal-area').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <div class="modal-handle"></div>
+    <h3>${id?'Editar insumo':'Nuevo insumo'}</h3>
+    <div class="field"><label>Nombre</label><input id="di-n" value="${d.name}" placeholder="Ej: Harina"></div>
+    <div class="field row2"><div><label>Precio ($)</label><input type="number" id="di-p" value="${d.price}" step="0.01" oninput="updateIPreview()"></div><div><label>Cantidad</label><input type="number" id="di-q" value="${d.qty}" oninput="updateIPreview()"></div></div>
+    <div class="field row2"><div><label>Unidad</label><select id="di-u">${['g','ml','unidades','kg','L'].map(u=>`<option ${d.unit===u?'selected':''}>${u}</option>`).join('')}</select></div><div><label>Proveedor</label><input id="di-s" value="${d.supplier}" placeholder="Mercado"></div></div>
+    <div class="info-box">Costo unitario: <strong id="di-prev">$${d.qty?(d.price/d.qty).toFixed(4):'-'}</strong>${id?' · Se actualiza en todas las recetas':''}</div>
+    <div class="modal-btns"><button class="m-c" onclick="closeModal()">Cancelar</button><button class="m-ok" onclick="saveIng(${id||'null'})">Guardar</button></div>
+  </div></div>`;
+}
+function updateIPreview(){const p=+document.getElementById('di-p')?.value||0,q=+document.getElementById('di-q')?.value||0,el=document.getElementById('di-prev');if(el)el.textContent=q?'$'+(p/q).toFixed(4):'-';}
+function saveIng(eid){
+  const name=document.getElementById('di-n').value.trim(),price=+document.getElementById('di-p').value||0,qty=+document.getElementById('di-q').value||0;
+  if(!name||!qty){toast('⚠ Completa nombre y cantidad');return;}
+  const item={id:eid||S.nextId++,name,price,qty,unit:document.getElementById('di-u').value,supplier:document.getElementById('di-s').value.trim(),updated:!!eid};
+  if(eid)S.db=S.db.map(d=>d.id===eid?item:d);else S.db.push(item);
+  save();closeModal();renderDB();
+  if(eid){renderRecipes();renderHome();}
+  toast(eid?`Actualizado · Recetas recalculadas ✓`:'Insumo guardado ✓');
+}
+
+// ── ORDERS ────────────────────────────────────────────────────────────────
+function renderOrders(){
+  const fc={all:'Todos',pending:'Pendientes',ready:'Listos',delivered:'Entregados'};
+  const cnt={all:S.orders.length};S.orders.forEach(o=>cnt[o.status]=(cnt[o.status]||0)+1);
+  document.getElementById('order-filters').innerHTML=Object.entries(fc).map(([k,l])=>`<button class="f-btn ${S.orderFilter===k?'on':''}" onclick="setOF('${k}')">${l} <span style="opacity:.6">${cnt[k]||0}</span></button>`).join('');
+  let list=[...S.orders];
+  if(S.orderFilter!=='all')list=list.filter(o=>o.status===S.orderFilter);
+  list.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const el=document.getElementById('order-list');
+  if(!list.length){el.innerHTML=`<div class="empty">No hay pedidos${S.orderFilter!=='all'?' en este estado':' aún'}.<br><br><button class="btn btn-p" style="width:auto;padding:10px 20px" onclick="openOrderModal()">Crear pedido</button></div>`;return;}
+  const stMap={pending:['b-amber','Pendiente'],ready:['b-green','Listo ✓'],delivered:['b-gray','Entregado']};
+  el.innerHTML=list.map(o=>{
+    const total=oTotal(o),days=dUntil(o.date),urgent=days<=0&&o.status!=='delivered';
+    const dlbl=days===0?'Hoy':days===1?'Mañana':days<0?'Vencido':fDate(o.date);
+    const [sc,sl]=stMap[o.status]||['b-gray','?'];
+    const bg=avBg(o.client),fg=avFg(o.client);
+    const its=o.items.map(it=>{const r=gr(it.rId);return r?`${it.qty}× ${r.name}`:''}).filter(Boolean).join(', ');
+    const rows=o.items.map(it=>{const r=gr(it.rId);if(!r)return '';const s=rPU(r)*r.units*it.qty;return `<div class="sr"><span>${it.qty}× ${r.name} (${r.units*it.qty} uds)</span><span style="color:var(--rose);font-weight:600">$${s.toFixed(2)}</span></div>`;}).join('');
+    return `<div class="item" id="oc-${o.id}">
+      <div class="item-h" onclick="toggleItem('oc-${o.id}')">
+        <div class="avatar" style="background:${bg};color:${fg}">${initials(o.client)}</div>
+        <div style="flex:1;min-width:0"><div class="item-n">${o.client}${urgent?'<span class="urgent">HOY</span>':''}</div><div class="item-m">${dlbl} ${o.time} · ${its.length>26?its.slice(0,24)+'…':its}</div></div>
+        <div class="badges" style="flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:14px;font-weight:700;color:var(--rose)">$${total.toFixed(2)}</span><span class="badge ${sc}">${sl}</span><span class="chev">▼</span></div>
+      </div>
+      <div class="item-b">
+        ${rows}<div class="divider"></div>
+        <div class="sr"><span style="color:var(--muted)">Pago</span><span>${o.pay}</span></div>
+        ${o.notes?`<div class="sr"><span style="color:var(--muted)">Notas</span><span style="text-align:right;max-width:170px;font-size:11px">${o.notes}</span></div>`:''}
+        <div class="sr big"><span>Total</span><span>$${total.toFixed(2)}</span></div>
+        <div class="action-row">
+          <button class="btn-sm edit" onclick="openStatusModal(${o.id})">Cambiar estado</button>
+          <button class="btn-sm del" onclick="delOrder(${o.id})">Eliminar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function setOF(f){S.orderFilter=f;renderOrders();}
+function delOrder(id){if(!confirm('¿Eliminar este pedido?'))return;S.orders=S.orders.filter(o=>o.id!==id);save();renderOrders();renderHome();toast('Pedido eliminado');}
+
+function openStatusModal(id){
+  document.getElementById('modal-area').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <div class="modal-handle"></div><h3>Cambiar estado</h3>
+    <button class="st-btn" style="background:var(--amberL);color:var(--amber)" onclick="setOS(${id},'pending')">⏳ Pendiente</button>
+    <button class="st-btn" style="background:var(--greenL);color:var(--green)" onclick="setOS(${id},'ready')">✓ Listo para entregar</button>
+    <button class="st-btn" style="background:rgba(28,18,8,.05);color:var(--muted)" onclick="setOS(${id},'delivered')">Entregado</button>
+    <button class="m-c" style="width:100%;padding:10px;border-radius:var(--rsm);font-size:13px;font-weight:600;cursor:pointer;background:transparent;border:0.5px solid var(--line);color:var(--muted);margin-top:4px" onclick="closeModal()">Cancelar</button>
+  </div></div>`;
+}
+function setOS(id,s){const o=S.orders.find(x=>x.id===id);if(o){o.status=s;save();}closeModal();renderOrders();renderHome();toast({pending:'Marcado como pendiente',ready:'¡Listo para entregar!',delivered:'Entregado ✓'}[s]);}
+
+let _si={};
+function openOrderModal(){
+  _si={};
+  document.getElementById('modal-area').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" style="max-height:92vh;overflow-y:auto">
+    <div class="modal-handle"></div><h3>Nuevo pedido</h3>
+    <div class="field"><label>Cliente</label><input id="no-c" placeholder="Nombre completo"></div>
+    <div class="field row2"><div><label>Teléfono</label><input id="no-ph" type="tel" placeholder="+593..."></div><div><label>Fecha entrega</label><input id="no-d" type="date" value="${todayStr()}"></div></div>
+    <div class="field row2"><div><label>Hora</label><input id="no-t" type="time" value="10:00"></div><div><label>Pago</label><select id="no-p"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Pendiente</option></select></div></div>
+    <div class="field"><label>Notas</label><textarea id="no-n" placeholder="Dirección, instrucciones..."></textarea></div>
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 7px">Productos</div>
+    <div id="no-pick"></div>
+    <div id="no-sum"></div>
+    <div class="modal-btns"><button class="m-c" onclick="closeModal()">Cancelar</button><button class="m-ok" onclick="saveOrder()">Confirmar</button></div>
+  </div></div>`;
+  renderOPick();
+}
+function renderOPick(){
+  const el=document.getElementById('no-pick');if(!el)return;
+  el.innerHTML=S.recipes.map(r=>`
+    <div class="picker-item ${_si[r.id]?'sel':''}">
+      <div style="width:8px;height:8px;border-radius:50%;background:${r.color}"></div>
+      <span class="pi-name">${r.name}</span>
+      <span style="font-size:11px;color:var(--muted)">$${(rPU(r)*r.units).toFixed(2)}/lote</span>
+      <div class="pi-ctrl">
+        <button onclick="oPick(${r.id},-1)">−</button>
+        <span>${_si[r.id]||0}</span>
+        <button onclick="oPick(${r.id},1)">+</button>
+      </div>
+    </div>`).join('');
+  const keys=Object.keys(_si).filter(k=>_si[k]>0);
+  const sumEl=document.getElementById('no-sum');if(!sumEl)return;
+  if(!keys.length){sumEl.innerHTML='';return;}
+  let tot=0;
+  const rows=keys.map(k=>{const r=gr(parseInt(k));if(!r)return '';const s=rPU(r)*r.units*_si[k];tot+=s;return `<div class="sr"><span>${_si[k]}× ${r.name}</span><span>$${s.toFixed(2)}</span></div>`;}).join('');
+  sumEl.innerHTML=`<div class="sum-box">${rows}<div class="sr big"><span>Total</span><span>$${tot.toFixed(2)}</span></div></div>`;
+}
+function oPick(id,d){const c=_si[id]||0,n=Math.max(0,c+d);if(!n)delete _si[id];else _si[id]=n;renderOPick();}
+function saveOrder(){
+  const c=document.getElementById('no-c')?.value.trim(),d=document.getElementById('no-d')?.value;
+  if(!c){toast('⚠ Ingresa el nombre del cliente');return;}
+  if(!d){toast('⚠ Selecciona la fecha');return;}
+  if(!Object.keys(_si).filter(k=>_si[k]>0).length){toast('⚠ Selecciona al menos un producto');return;}
+  const order={id:S.nextId++,client:c,phone:document.getElementById('no-ph')?.value||'',date:d,time:document.getElementById('no-t')?.value||'10:00',pay:document.getElementById('no-p')?.value||'Efectivo',notes:document.getElementById('no-n')?.value||'',status:'pending',items:Object.keys(_si).filter(k=>_si[k]>0).map(k=>({rId:parseInt(k),qty:_si[k]}))};
+  S.orders.push(order);save();closeModal();renderOrders();renderHome();toast(`Pedido de ${c} guardado ✓`);
+}
+
+// ── PWA ───────────────────────────────────────────────────────────────────
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();deferredPrompt=e;
+  document.getElementById('install-banner').style.display='flex';
+});
+document.getElementById('install-btn')?.addEventListener('click', async () => {
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  const {outcome}=await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  document.getElementById('install-banner').style.display='none';
+  if(outcome==='accepted')toast('¡App instalada! Ya puedes abrirla desde tu pantalla de inicio');
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registrado')).catch(e=>console.warn('SW error:',e)));
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+load();
+renderHome();
+</script>
+</body>
+</html>
